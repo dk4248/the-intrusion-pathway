@@ -1,0 +1,10 @@
+# Python >= 3.10 (experiments were run with Python 3.13, PyTorch 2.11, CUDA 13)
+torch>=2.4
+transformer_lens==2.18.0
+transformers==4.57.3
+datasets>=3.0
+numpy
+scipy
+matplotlib
+tqdm
+sentencepiece

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# outputs written next to each code/ directory
+*/data/
+*/results/
+*/logs/
+*/figs/
+
+# third-party data (see README, Setup)
+external/*
+!external/.gitkeep
