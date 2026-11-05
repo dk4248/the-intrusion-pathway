@@ -4,7 +4,7 @@ Code for *"The Intrusion Pathway: How Non-Evidential Context Degrades Language M
 All experiments use open-weight models through
 [TransformerLens](https://github.com/TransformerLensOrg/TransformerLens); no model is trained.
 
-**Website:** <https://gautam2905.github.io/intrusion-pathway/> · **Paper (PDF):** <https://gautam2905.github.io/intrusion-pathway/intrusion-pathway.pdf>
+**Website:** <https://dk4248.github.io/the-intrusion-pathway/> · **Paper (PDF):** <https://dk4248.github.io/the-intrusion-pathway/intrusion-pathway.pdf>
 
 ## Layout
 
