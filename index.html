@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Intrusion Pathway</title>
+<meta name="description" content="How Non-Evidential Context Degrades Language Model Performance: an explorable model walkthrough of the paper.">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0d10;color:#e6e8eb;font-family:'IBM Plex Sans',Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#e6e8eb;text-decoration:none}
+a:hover{color:#ff8552}
+*{box-sizing:border-box}
+button:focus-visible,input:focus-visible{outline:1px solid #ff8552;outline-offset:2px}
+input[type=range]{accent-color:#ff8552}
+::selection{background:#ff855244}
+*{scrollbar-width:thin;scrollbar-color:#2b323c transparent}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#2b323c}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+
+<header style="min-height:86vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:96px 32px 64px;gap:22px;border-bottom:1px solid #1f252d">
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b929c;letter-spacing:0.12em">PREPRINT</span>
+  <h1 style="margin:0;font-size:64px;line-height:1.02;font-weight:600;letter-spacing:-0.025em;max-width:900px;text-wrap:balance">The Intrusion Pathway</h1>
+  <p style="margin:0;font-size:24px;line-height:1.35;font-weight:400;color:#c9ced5;max-width:760px;text-wrap:balance">How Non-Evidential Context Degrades Language Model Performance</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:6px;max-width:980px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;font-size:17px;line-height:1.4;color:#e6e8eb">
+      <span style="white-space:nowrap">Dikshant Kukreja<sup style="font-size:11px;color:#ff8552;margin-left:2px">1,*</sup></span>
+      <span style="white-space:nowrap">Gautam Gupta<sup style="font-size:11px;color:#ff8552;margin-left:2px">2,*</sup></span>
+      <span style="white-space:nowrap">Avni Mittal<sup style="font-size:11px;color:#ff8552;margin-left:2px">3</sup></span>
+      <span style="white-space:nowrap">Avinash Anand<sup style="font-size:11px;color:#ff8552;margin-left:2px">4</sup></span>
+      <span style="white-space:nowrap">Kritarth Prasad<sup style="font-size:11px;color:#ff8552;margin-left:2px">4</sup></span>
+      <span style="white-space:nowrap">Zhengkui Wang<sup style="font-size:11px;color:#ff8552;margin-left:2px">4</sup></span>
+      <span style="white-space:nowrap">Timothy Liu<sup style="font-size:11px;color:#ff8552;margin-left:2px">5</sup></span>
+      <span style="white-space:nowrap">Rajiv Ratn Shah<sup style="font-size:11px;color:#ff8552;margin-left:2px">6</sup></span>
+      <span style="white-space:nowrap">Aik Beng Ng<sup style="font-size:11px;color:#ff8552;margin-left:2px">5</sup></span>
+      <span style="white-space:nowrap">Simon See<sup style="font-size:11px;color:#ff8552;margin-left:2px">5</sup></span>
+      <span style="white-space:nowrap">Erik Cambria<sup style="font-size:11px;color:#ff8552;margin-left:2px">7</sup></span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px 20px;font-size:13px;line-height:1.5;color:#8b929c">
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">1</sup>TurboML <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(turboml.com)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">2</sup>Indraprastha Institute of Information Technology, Delhi <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(iiitd.ac.in)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">3</sup>Independent Researcher</span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">4</sup>Singapore Institute of Technology <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(singaporetech.edu.sg)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">5</sup>NVIDIA <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(nvidia.com)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">6</sup>Indian Institute of Technology, Kanpur <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(iitk.ac.in)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">7</sup>Nanyang Technological University <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#59616c">(ntu.edu.sg)</span></span>
+      <span style="white-space:nowrap"><sup style="font-size:10px;color:#ff8552;margin-right:3px">*</sup>Equal contribution</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px">
+    <a href="intrusion-pathway.pdf" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:1px solid #2b323c;background:#11151a;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#e6e8eb" style-hover="border-color:#ff8552">Paper (PDF)</a>
+    <a href="https://github.com/gautam2905/intrusion-pathway" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:1px solid #2b323c;background:#11151a;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#e6e8eb" style-hover="border-color:#ff8552">Code · GitHub</a>
+    <span style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:1px dashed #2b323c;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#6b7380">arXiv · coming soon</span>
+  </div>
+  <a href="#abstract" style="margin-top:40px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:#6b7380" style-hover="color:#ff8552">SCROLL ↓</a>
+</header>
+
+<section id="abstract" style="padding:88px 32px 96px;display:flex;justify-content:center">
+  <div style="width:100%;max-width:940px;display:flex;flex-direction:column;align-items:center;gap:24px">
+    <h2 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-0.01em">Abstract</h2>
+    <p style="margin:0;font-size:17px;line-height:1.75;color:#b8bec6;text-align:left;text-wrap:pretty">Language models lose accuracy when a prompt contains non-evidential context: irrelevant statements from unrelated domains, or random off-distribution tokens, with no competing answer and no semantic overlap with the query. Such noise pervades retrieval-augmented, tool-using, and long-context deployments, yet the failure has lacked a mechanistic account. We trace the corruption to the Intrusion Pathway, which starts with MLPs enriching both query-subject and irrelevant-token representations, parroting heads carry prefix-token content to the prediction position, and relational readers largely avoid unrelated sources. Nevertheless, preserved subject enrichment and selective reading do not prevent intrusion in the broader computation. We then localize part of this interference to a sparse set of attention heads, which we call intrusion heads. Their prefix-derived writes promote distractor-related content, while their reduced support for the correct answer arises primarily from weaker non-prefix contributions rather than direct suppression by the prefix. The same heads transfer across tasks and distractor types and are largely weight-disjoint from the heads that integrate relevant contextual evidence, enabling a class-conditional intervention. Replacing the corrupted last-token residual with its clean counterpart, an oracle probe that requires a matched clean forward pass, recovers 97.6% on average of the distractor-induced drop across four downstream tasks. A deployable mask level knockout of about ten heads, roughly 1% of the model's attention heads, recovers 57% at bounded cost to helpful context.</p>
+    <span style="margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:#6b7380">THE MODEL, LIVE ↓</span>
+  </div>
+</section>
+
+<main style="display:grid;grid-template-columns:minmax(300px,420px) minmax(0,1fr);border-top:1px solid #1f252d">
+  <div ref="{{ leftRef }}" style="display:flex;flex-direction:column">
+
+    <div data-step="0" data-screen-label="00 Orientation" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">00 · ORIENTATION</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Llama-3.1-8B, cut open</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Eight slabs, left to right, stand for eight bands of four layers. Rows are token positions. The heavy row at the bottom of each slab is END, where the next token is read out. The heads that write into END sit on the diagonal rising from it.</p>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Moving dots are attention. They leave a source position, enter a head, and the head's write joins END. Dots moving right along a row are the residual stream.</p>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:center;font-size:14px;margin-top:8px;color:#b8bec6">
+        <span style="width:10px;height:10px;background:#ff8552;display:block"></span><span>Intrusion head</span>
+        <span style="width:10px;height:10px;background:#ff8552;transform:rotate(45deg);outline:1.5px solid #b39dff;display:block"></span><span>Dual-use head (intrusion + retrieval)</span>
+        <span style="width:10px;height:10px;border:1.5px solid #b39dff;background:#b39dff40;display:block"></span><span>Retrieval head</span>
+        <span style="width:9px;height:9px;border-radius:50%;background:#e6e8eb;display:block"></span><span>Parroting head</span>
+        <span style="width:10px;height:10px;border-radius:50%;border:1.5px solid #5cc8e0;display:block"></span><span>Relational reader</span>
+        <span style="width:10px;height:10px;background:#5cc8e0;transform:rotate(45deg) scale(0.8);display:block"></span><span>MLP enrichment</span>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">The color of the END row, and the curve under the slabs. Cyan is answer-supporting content. Orange is content that came from the prefix.</span>
+      </div>
+    </div>
+
+    <div data-step="1" data-screen-label="01 Regimes" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">01 · CONTEXT REGIMES</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Same query, six prefixes</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">The query never changes. Only the prefix does. Two of these supply no evidence and propose no capital, yet still lower the Berlin logit. Gold-logit shifts from Table 1:</p>
+      <div style="display:flex;flex-direction:column;border-top:1px solid #2b323c">
+        <button data-act="regime:golden" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Golden · “Germany's capital city is Berlin.”</span><span style="font-family:'IBM Plex Mono',monospace;color:#5cc8e0">+4.8</span></button>
+        <button data-act="regime:counter" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Counterfactual · “…is Munich.”</span><span style="font-family:'IBM Plex Mono',monospace;color:#ff8552">−2.6</span></button>
+        <button data-act="regime:related" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Related · “The capital of France is Paris.”</span><span style="font-family:'IBM Plex Mono',monospace;color:#5cc8e0">+1.8</span></button>
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Irrelevant · “Computers are useful.”</span><span style="font-family:'IBM Plex Mono',monospace;color:#ff8552">−1.1</span></button>
+        <button data-act="regime:irrM" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Irrelevant, multi-token · “Computers perform…”</span><span style="font-family:'IBM Plex Mono',monospace;color:#ff8552">−2.3</span></button>
+        <button data-act="regime:random" onClick="{{ onAct }}" style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;background:none;border:0;border-bottom:1px solid #1f252d;font-family:inherit;font-size:15px;text-align:left;cursor:pointer;color:#e6e8eb" style-hover="color:#ff8552"><span>Random · “Calculator.”</span><span style="font-family:'IBM Plex Mono',monospace;color:#ff8552">−0.2</span></button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">The next-token distribution under the model. The long irrelevant prefix costs twice the short one and never mentions a city.</span>
+      </div>
+    </div>
+
+    <div data-step="2" data-screen-label="02 MLP enrichment" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">02 · MLP ENRICHMENT · §3</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Germany is still enriched</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Subject-position MLP writes make Germany's attributes available at the Germany position. Under the irrelevant prefix that signal is effectively unchanged (App. B.1.1).</p>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">The MLPs enrich the irrelevant tokens too. “Computers” picks up its own associations (B.1.2). The two tokens differ in relevance, not in whether they carry associated information.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="regime:none" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">bare query</button>
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">with “Computers are useful.”</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">The diamonds on the two leftmost slabs. Germany's looks the same in both runs; the prefix diamonds are new. The lost support for Berlin has to happen further along.</span>
+      </div>
+    </div>
+
+    <div data-step="3" data-screen-label="03 Parroting" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">03 · PARROTING · §2–3</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Prefix tokens get copied to END</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Parroting heads carry prefix-token identity into END without a matching induction cue. On a multi-token prefix their attention spreads over several content words, and the write is approximately an attention-weighted mixture of those tokens' unembedding directions.</p>
+      <div style="padding:14px 16px;background:#11151a;border:1px solid #1f252d;font-family:'IBM Plex Mono',monospace;font-size:15px;line-height:1.5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>o<sub>h</sub><sup>content</sup> = c<sub>h</sub> · Σ<sub>p∈P</sub> α<sub>p</sub> u<sub>t<sub>p</sub></sub> + r<sub>h</sub></span><span style="font-size:11px;color:#8b929c">Eq. 2</span></div>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#8b929c;text-wrap:pretty">Swapping the value at one source position with attention held fixed shifts these heads' writes toward the swapped token (B.2.1). The effect is in OV, not QK routing.</p>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">The white-dot heads. Orange arcs fan out over Computers, mathematical and simulations, then leave as one orange write into END.</span>
+      </div>
+    </div>
+
+    <div data-step="4" data-screen-label="04 Relational readers" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">04 · RELATIONAL READERS · §3</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">The readers look away from the filler</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Mid-layer readers, selected on golden context, attend to candidates of the expected answer type and assign little attention to unrelated filler (B.4).</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">irrelevant</button>
+        <button data-act="regime:golden" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">golden</button>
+        <button data-act="regime:counter" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">counterfactual</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">Under the irrelevant prefix the hollow-circle heads barely touch it. Under Golden or Counterfactual they jump to Berlin or Munich. Selective reading does not clean END, which is already tinted by earlier layers.</span>
+      </div>
+    </div>
+
+    <div data-step="5" data-screen-label="05 Middle block" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">05 · MIDDLE-BLOCK INTERVENTION · §3</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Effective, not selective</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Replace every middle-block head's END write with its context-free counterpart while the prefix stays in the input. This restores most of the gold-logit loss. Masking the same heads' END→prefix reads barely helps.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="mid:toggle" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid {{ midBd }};background:{{ midBg }};color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left">restore mid-block writes: {{ midLabel }}</button>
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">irrelevant</button>
+        <button data-act="regime:golden" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">golden</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">Switch to Golden with the restore on: most of the evidence benefit goes with it, and it needs a clean donor run.</span>
+      </div>
+    </div>
+
+    <div data-step="6" data-screen-label="06 Intrusion heads" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">06 · INTRUSION HEADS · §4</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">A sparse, late population</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Score each head by how much its direct gold contribution falls, weighted by its attention to the prefix.</p>
+      <div style="padding:14px 16px;background:#11151a;border:1px solid #1f252d;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>s<sub>int</sub>(h) = 1/N Σ<sub>i</sub> a<sub>h</sub><sup>irr</sup> · max(0, DLA<sub>h</sub><sup>nctx</sup>(g) − DLA<sub>h</sub><sup>irr</sup>(g))</span><span style="font-size:11px;color:#8b929c">Eq. 3</span></div>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">In Llama-3.1-8B the population sits mostly in late layers, and its attention to the prefix rises when one is present (Table C.1). Distractor writing is not part of the score, and it still rises.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="regime:none" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">bare query</button>
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">irrelevant</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">Toggle Bare and Irrelevant. The orange squares move part of their attention from BOS and the query onto the prefix, and their writes turn orange.</span>
+      </div>
+    </div>
+
+    <div data-step="7" data-screen-label="07 P/U split" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">07 · P / U SPLIT AND MASKING · §4</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">What the mask does inside one head</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Split each write into o<sub>h</sub> = P<sub>h</sub> + U<sub>h</sub>. P comes from prefix positions and carries most of the extra distractor content, with near-zero mean gold attribution. The gold drop sits in a weaker U. Masking END→prefix attention removes P, and softmax redistribution scales U up.</p>
+      <div style="padding:14px 16px;background:#11151a;border:1px solid #1f252d;font-family:'IBM Plex Mono',monospace;font-size:15px;line-height:1.5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>o<sub>h</sub><sup>mask</sup> − o<sub>h</sub> = −P<sub>h</sub> + a<sub>h</sub>/(1−a<sub>h</sub>) · U<sub>h</sub></span><span style="font-size:11px;color:#8b929c">Eq. 4</span></div>
+      <div style="padding:16px;background:#11151a;border:1px solid #1f252d;display:flex;flex-direction:column;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+        <div style="display:flex;justify-content:space-between;color:#8b929c"><span>{{ selId }}</span><span>a = {{ selA }}</span></div>
+        <span style="color:#8b929c">unmasked write</span>
+        <div style="display:flex;height:22px;width:100%">
+          <div style="width:{{ selPw }};background:#ff8552;color:#0b0d10;padding:4px 6px;overflow:hidden">P</div>
+          <div style="width:{{ selUw }};background:#5cc8e0;color:#0b0d10;padding:4px 6px;overflow:hidden">U</div>
+        </div>
+        <span style="color:#8b929c">masked write</span>
+        <div style="display:flex;height:22px;width:100%">
+          <div style="width:100%;background:#5cc8e0;color:#0b0d10;padding:4px 6px">U {{ selGain }}</div>
+        </div>
+        <button data-act="mask:sel" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid {{ selBd }};background:{{ selBg }};color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left">{{ selBtnLabel }}</button>
+      </div>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#8b929c">Click any orange square in the model to load it here. Fig. 5's example head has a = 0.47, so U is scaled ×1.90.</p>
+    </div>
+
+    <div data-step="8" data-screen-label="08 Intrusion vs retrieval" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">08 · INTRUSION VS RETRIEVAL · §4</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Two populations, mostly apart</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Retrieval heads read the answer span in golden context and write toward it. Ranked independently, the top heads of the two populations differ, with a small overlap (Fig. 6). That separation is what makes a class-conditional mask possible.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="regime:golden" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">golden</button>
+        <button data-act="regime:irr1" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">irrelevant</button>
+        <button data-act="mask:k10" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">mask intrusion</button>
+        <button data-act="mask:retr" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#b39dff">mask retrieval</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">Under Golden, masking the intrusion heads keeps most of the benefit. Masking the retrieval heads removes it.</span>
+      </div>
+    </div>
+
+    <div data-step="9" data-screen-label="09 Oracle and λ" style="min-height:88vh;padding:48px 32px;border-bottom:1px solid #1f252d;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">09 · ORACLE PATCH AND λ · §4–5</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">The oracle and the deployable mask</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">The oracle swaps the END residual at the intrusion-band layer for its clean counterpart, so it needs a matched clean pass. The mask needs nothing at inference.</p>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">The λ slider under the model interpolates the intrusion heads' writes toward their context-free values: o(λ) = o<sup>irr</sup> + λ(o<sup>nctx</sup> − o<sup>irr</sup>).</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button data-act="patch:toggle" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid {{ patchBd }};background:{{ patchBg }};color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left">oracle patch: {{ patchLabel }}</button>
+        <button data-act="mask:k10" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">mask intrusion</button>
+        <button data-act="mask:clear" onClick="{{ onAct }}" style="padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#8b929c;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#e6e8eb">clear</button>
+      </div>
+      <div style="border-top:1px solid #2b323c;padding-top:12px;margin-top:auto;display:flex;flex-direction:column;gap:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:#ff8552">WATCH</span>
+        <span style="font-size:15px;line-height:1.5">Patch on: END turns cyan from the patched slab onward. Patch off, intrusion masked: partial recovery from about 1% of heads.</span>
+      </div>
+    </div>
+
+    <div data-step="10" data-screen-label="10 Free play" style="min-height:100vh;padding:48px 32px;display:flex;flex-direction:column;gap:16px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#ff8552">10 · FREE PLAY</span>
+      <h2 style="margin:0;font-size:28px;line-height:1.12;font-weight:600">Every control is live</h2>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:#b8bec6;text-wrap:pretty">Click heads in the model to mask them one at a time. Combine regimes, masks, λ and the oracle patch.</p>
+      <button data-act="reset" onClick="{{ onAct }}" style="align-self:flex-start;padding:8px 12px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">reset everything</button>
+    </div>
+  </div>
+
+  <div ref="{{ panelRef }}" style="position:sticky;top:0;height:100vh;display:flex;flex-direction:column;border-left:1px solid #1f252d;background:#0b0d10;min-width:0">
+    <div style="display:flex;flex-wrap:{{ tabWrap }};overflow-x:auto;scrollbar-width:none;align-items:stretch;border-bottom:1px solid #1f252d;flex-shrink:0">
+      <sc-for list="{{ regimes }}" as="rg" hint-placeholder-count="7">
+        <button data-act="regime:{{ rg.key }}" onClick="{{ onAct }}" style="padding:0 14px;min-height:40px;border:0;border-right:1px solid #1f252d;border-bottom:2px solid {{ rg.bd }};background:transparent;color:{{ rg.fg }};font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;white-space:nowrap;text-align:left">{{ rg.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:12px 16px;border-bottom:1px solid #1f252d;background:#0e1115;font-family:'IBM Plex Mono',monospace;font-size:{{ promptFs }};font-weight:600;flex-shrink:0">
+      <sc-for list="{{ promptToks }}" as="tk" hint-placeholder-count="10">
+        <span style="padding:3px 7px;color:{{ tk.fg }};background:{{ tk.bg }};border:1px solid {{ tk.bd }}">{{ tk.text }}</span>
+      </sc-for>
+      <span style="padding:3px 10px;border:1px dashed #e6e8eb;color:{{ ansCol }}">{{ ansTok }}</span>
+    </div>
+    <div style="flex:1;min-height:0;display:flex;min-width:0;overflow:hidden">
+      <div ref="{{ wrapRef }}" style="position:relative;flex:1;min-width:0;min-height:0;overflow:hidden">
+      <div style="position:absolute;right:14px;top:8px;z-index:1;display:{{ keyDisp }};gap:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#b8bec6;pointer-events:none">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:2px;background:#5cc8e0;display:block"></span>supports Berlin</div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:2px;background:#ff8552;display:block"></span>from the prefix</div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:0;border-top:1px dashed #8b929c;display:block"></span>blocked by mask</div>
+      </div>
+      <canvas ref="{{ cvRef }}" onMouseMove="{{ onMove }}" onMouseLeave="{{ onLeave }}" onClick="{{ onCanvasClick }}" style="position:absolute;inset:0;width:100%;height:100%;cursor:{{ cursor }}"></canvas>
+      <div style="position:absolute;right:12px;bottom:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7380;text-align:right;pointer-events:none;line-height:1.5">Llama-3.1-8B · 48 of 1,024 heads<br>{{ modeLine }}</div>
+
+      <sc-if value="{{ hasTip }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:{{ tipX }}px;top:{{ tipY }}px;background:#161b21;border:1px solid #2b323c;color:#e6e8eb;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;pointer-events:none;z-index:2">
+          <div style="font-weight:600">{{ tip.id }} · {{ tip.type }}</div>
+          <div style="color:#8b929c">prefix attn {{ tip.a }}</div>
+          <div style="color:#ff8552">{{ tip.hint }}</div>
+        </div>
+      </sc-if>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);border-top:1px solid #1f252d;flex-shrink:0">
+      <div style="padding:12px 16px 8px;border-right:1px solid #1f252d;display:flex;flex-direction:column;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-width:0">
+        <span style="color:#8b929c;white-space:nowrap">next token · log p</span>
+        <div style="position:relative;height:56px;margin-top:4px">
+          <span style="position:absolute;right:0;top:-2px;display:flex;gap:8px;font-size:9px;color:#6b7380;pointer-events:none"><span style="color:{{ distStroke }}">— now</span><span>- - bare</span></span>
+          <svg viewBox="0 0 300 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+            <path d="M0 99.5 L300 99.5" stroke="#1f252d" stroke-width="1" vector-effect="non-scaling-stroke" fill="none"></path>
+            <path d="{{ distRef }}" fill="none" stroke="#6b7380" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></path>
+            <path d="{{ distArea }}" fill="{{ distFill }}" stroke="none"></path>
+            <path d="{{ distLine }}" fill="none" stroke="{{ distStroke }}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>
+          </svg>
+          <sc-for list="{{ distPts }}" as="d" hint-placeholder-count="0">
+            <span style="position:absolute;left:{{ d.x }};top:{{ d.y }};width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:{{ d.c }}"></span>
+          </sc-for>
+        </div>
+        <div style="position:relative;height:14px;overflow:hidden">
+          <sc-for list="{{ distPts }}" as="d" hint-placeholder-count="0">
+            <span style="position:absolute;left:{{ d.x }};top:1px;font-size:9px;color:{{ d.c }};white-space:nowrap;transform:translateX({{ d.tx }})">{{ d.lab }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button data-act="mask:k10" onClick="{{ onAct }}" style="padding:6px 10px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font:inherit;cursor:pointer;text-align:left" style-hover="border-color:#ff8552">mask intrusion</button>
+          <button data-act="mask:retr" onClick="{{ onAct }}" style="padding:6px 10px;border:1px solid #2b323c;background:transparent;color:#e6e8eb;font:inherit;cursor:pointer;text-align:left" style-hover="border-color:#b39dff">mask retrieval</button>
+          <button data-act="mask:clear" onClick="{{ onAct }}" style="padding:6px 10px;border:1px solid #2b323c;background:transparent;color:#8b929c;font:inherit;cursor:pointer;text-align:left" style-hover="border-color:#e6e8eb">clear</button>
+          <button data-act="patch:toggle" onClick="{{ onAct }}" style="padding:6px 10px;border:1px solid {{ patchBd }};background:{{ patchBg }};color:#e6e8eb;font:inherit;cursor:pointer;text-align:left">patch {{ patchLabel }}</button>
+        </div>
+        <label style="display:grid;grid-template-columns:auto minmax(0,1fr) 36px;gap:10px;align-items:center;color:#8b929c">
+          <span>λ</span>
+          <input type="range" min="0" max="1" step="0.05" value="{{ lambda }}" onChange="{{ onLambda }}" style="width:100%">
+          <span style="color:#e6e8eb;text-align:right">{{ lambdaLabel }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer style="border-top:1px solid #1f252d;padding:28px 32px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b929c">Regime shifts are from Table 1. Head identities and per-head values are illustrative; see the paper for measurements.</footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const BG='#0b0d10',TXT='#e6e8eb',DIM='#8b929c',SUP='#5cc8e0',INT='#ff8552',RET='#b39dff',SIDE='#c08d6e',FUNC='#3d444e';
+const ROLEC={subj:SUP,rel:SUP,evid:SUP,func:FUNC,dist:INT,side:SIDE,end:TXT};
+const REG={
+ none:{label:'bare',prefix:[],dGold:0,dist:{},kind:'none'},
+ golden:{label:'golden',prefix:[['Germany','subj'],["'s",'func'],[' capital','rel'],[' city','func'],[' is','func'],[' Berlin','evid',1],['.','func']],dGold:4.8,dist:{},kind:'help',benefit:4.8,retr:0.75},
+ counter:{label:'counterfactual',prefix:[['The','func'],[' capital','rel'],[' of','func'],[' Germany','subj'],[' is','func'],[' Munich','dist',1],['.','func']],dGold:-2.6,dist:{Munich:4.9},intr:0.2,kind:'conflict'},
+ related:{label:'related',prefix:[['The','func'],[' capital','rel'],[' of','func'],[' France','side'],[' is','func'],[' Paris','side',1],['.','func']],dGold:1.8,dist:{Paris:1.2},kind:'help',benefit:1.8,retr:0.4},
+ irr1:{label:'irrelevant',prefix:[['Comput','dist'],['ers','dist'],[' are','func'],[' useful','dist'],['.','func']],dGold:-1.1,dist:{Computers:2.1},intr:0.62,kind:'noise'},
+ irrM:{label:'irrelevant (long)',prefix:[['Computers','dist'],[' perform','dist'],[' mathematical','dist'],[' simulations','dist'],[' efficiently','dist'],['.','func']],dGold:-2.3,dist:{Computers:1.9,mathematical:1.4,simulations:1.7},intr:0.62,kind:'noise'},
+ random:{label:'random',prefix:[['Calcul','dist'],['ator','dist'],['.','func']],dGold:-0.2,dist:{Calculator:1.0},intr:0.5,kind:'noise'},
+};
+const ORDER=['none','golden','counter','related','irr1','irrM','random'];
+const QRY=[['The','func'],[' capital','rel'],[' of','func'],[' Germany','subj'],[' is','end']];
+const BASE={Berlin:17.4,Munich:12.1,Hamburg:11.9,Paris:11.6,Frankfurt:11.2,'the':10.8,Calculator:6.8,simulations:6.5,mathematical:6.2,Computers:7.9};
+const OTHER=15.5;
+const ASSOC={'Germany':'Berlin · Europe · Deutsch',' Germany':'Berlin · Europe · Deutsch','Comput':'software · keyboard','Computers':'software · keyboard',' useful':'helpful · tool',' mathematical':'equation · algebra',' simulations':'model · physics',' perform':'execute',' Berlin':'city · Spree',' Munich':'Bavaria · city',' France':'Paris · Europe',' Paris':'city · Seine','Calcul':'arithmetic',' efficiently':'speed'};
+const SL=['L0–3','L4–7','L8–11','L12–15','L16–19','L20–23','L24–27','L28–31'];
+const PLAN=[['o','o','o','o','o','o'],['o','o','o','o','o','o'],['p','o','o','o','o','o'],['r','r','p','o','o','o'],['r','r','p','i','i','o'],['i','i','d','t','p','o'],['i','i','i','d','t','t'],['i','i','i','d','t','t']];
+const A_I=[.31,.38,.29,0.474,.35,.26,.41,.33,.44,.28],W_I=[.8,1,.7,1.3,.9,.6,1.1,.85,1.2,.75],A_D=[.36,.30,.39],W_D=[.9,.7,1],R_D=[.7,.9,.6],R_T=[1,1.2,.9,1.1,.8];
+const HEADS=[];(()=>{let ci=0,cd=0,ct=0;PLAN.forEach((row,s)=>row.forEach((ty,k)=>{const layer=s*4+((k*3+s)%4),hn=(s*13+k*7+5)%32;const h={id:'L'+layer+'.H'+hn,s,k,type:ty,a:0,w:0,r:0};if(ty==='i'){h.a=A_I[ci];h.w=W_I[ci];ci++}if(ty==='d'){h.a=A_D[cd];h.w=W_D[cd];h.r=R_D[cd];cd++}if(ty==='t'){h.r=R_T[ct];ct++}HEADS.push(h)}));const ws=HEADS.reduce((a,h)=>a+h.w,0),rs=HEADS.reduce((a,h)=>a+h.r,0);HEADS.forEach(h=>{h.wn=h.w/ws;h.rn=h.r/rs})})();
+const TYPEN={i:'intrusion',d:'dual-use',t:'retrieval',p:'parroting',r:'reader',o:'other'};
+const GAIN={i:1.4,d:1.2,p:0.9,r:0.4,t:0.4,o:0.2};
+const ids=f=>HEADS.filter(f).map(h=>h.id);
+const MASKS={k10:ids(h=>h.type==='i'),retr:ids(h=>h.type==='t'||h.type==='d'),clear:[]};
+const maxA=HEADS.filter(h=>h.type==='i').sort((a,b)=>b.a-a.a)[0];
+const STEPS=[
+ {regime:'irr1'},{regime:'irr1'},
+ {regime:'irr1',focus:[0,1],show:['mlp']},
+ {regime:'irrM',focus:[2,3,4,5],show:['p']},
+ {regime:'irr1',focus:[3,4],show:['r']},
+ {regime:'irr1',focus:[3,4,5],show:['r','p','i','d','t'],mid:true},
+ {regime:'irr1',focus:[4,5,6,7],show:['i','d']},
+ {regime:'irr1',focus:[maxA.s],show:['i','d'],sel:maxA.id},
+ {regime:'golden',focus:[5,6,7],show:['i','d','t'],mask:'k10'},
+ {regime:'irrM',focus:[6,7],show:['i','d','p']},
+ {free:true}
+];
+function tokensFor(rk){const R=REG[rk];return [{text:'<bos>',role:'func',pre:false,q:false},...R.prefix.map(([t,r,a])=>({text:t,role:r,pre:true,q:false,ans:!!a})),...QRY.map(([t,r])=>({text:t,role:r,pre:false,q:true}))]}
+function hex(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
+function mix(a,b,f){const A=hex(a),B=hex(b);return 'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*f)).join(',')+')'}
+function qb(a,c,b,u){const v=1-u;return [v*v*a[0]+2*v*u*c[0]+u*u*b[0],v*v*a[1]+2*v*u*c[1]+u*u*b[1]]}
+const MONO="'IBM Plex Mono', monospace";
+const CANDS=['Berlin','Munich','Hamburg','Frankfurt','Paris','the','Computers','mathematical','simulations','Calculator'];
+function cr(p){let d='M'+p[0][0].toFixed(1)+' '+p[0][1].toFixed(1);for(let i=0;i<p.length-1;i++){const p0=p[i-1]||p[i],p1=p[i],p2=p[i+1],p3=p[i+2]||p2;d+=' C'+(p1[0]+(p2[0]-p0[0])/6).toFixed(1)+' '+(p1[1]+(p2[1]-p0[1])/6).toFixed(1)+' '+(p2[0]-(p3[0]-p1[0])/6).toFixed(1)+' '+(p2[1]-(p3[1]-p1[1])/6).toFixed(1)+' '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)}return d}
+
+class Component extends DCLogic {
+  state={regime:'irr1',masked:{},patch:false,lambda:0,mid:false,focus:null,show:null,sel:maxA.id,hover:null,tx:0,ty:0,step:-1,ni:0,pin:false};
+  cvRef=React.createRef(); wrapRef=React.createRef(); leftRef=React.createRef(); panelRef=React.createRef();
+  componentDidMount(){this.g=new Array(8).fill(1);this.hp=[];const loop=()=>{try{this.draw()}catch(e){}this.raf=requestAnimationFrame(loop)};this.raf=requestAnimationFrame(loop);this.onScroll=()=>this.checkStep();window.addEventListener('scroll',this.onScroll,{passive:true});this.checkStep();if(window.ResizeObserver&&this.panelRef.current){this.ro=new ResizeObserver(en=>{const w=en[0].contentRect.width,n=w<880;if(n!==this.state.narrow)this.setState({narrow:n})});this.ro.observe(this.panelRef.current)}this.iv=setInterval(()=>{if(!this.state.pin)this.setState(s=>({ni:(s.ni+1)%Math.max(1,this.nLen||1)}))},4200)}
+  componentWillUnmount(){cancelAnimationFrame(this.raf);clearInterval(this.iv);if(this.ro)this.ro.disconnect();window.removeEventListener('scroll',this.onScroll)}
+  checkStep(){const root=this.leftRef.current;if(!root)return;let cur=0;root.querySelectorAll('[data-step]').forEach(el=>{if(el.getBoundingClientRect().top<window.innerHeight*0.55)cur=+el.dataset.step});if(cur!==this.state.step)this.applyStep(cur)}
+  applyStep(n){const p=STEPS[n];if(p.free){this.setState({step:n,focus:null,show:null,ni:0,pin:false});return}const m={};(MASKS[p.mask]||[]).forEach(id=>m[id]=true);this.setState({step:n,regime:p.regime,masked:m,patch:false,lambda:0,mid:!!p.mid,focus:p.focus||null,show:p.show||null,sel:p.sel||this.state.sel,ni:0,pin:false})}
+  noisy(R){return R.kind==='noise'||R.kind==='conflict'}
+  attn(h,toks,R,st){
+    const N=toks.length,E=N-1,w=new Array(N).fill(0),orig=new Array(N).fill(0);
+    const qi=r=>toks.findIndex(t=>t.q&&t.role===r);const iCap=qi('rel'),iGer=qi('subj');const Q={};
+    if(h.type==='o'){Q[0]=.6;Q[E]=.25;Q[iGer]=.08;Q[iCap]=.07}
+    else if(h.type==='r'){Q[iCap]=.35;Q[iGer]=.4;Q[E]=.1;Q[0]=.15}
+    else if(h.type==='p'){Q[iGer]=.25;Q[iCap]=.15;Q[0]=.4;Q[E]=.2}
+    else if(h.type==='t'){Q[iGer]=.25;Q[iCap]=.2;Q[0]=.45;Q[E]=.1}
+    else {Q[iGer]=.32;Q[iCap]=.2;Q[E]=.13;Q[0]=.35}
+    const pre=[];toks.forEach((t,i)=>{if(t.pre&&t.role!=='func')pre.push(i)});
+    const ans=toks.findIndex(t=>t.pre&&t.ans);const k=R.kind;let pa=0,tgt=null;
+    if(pre.length){
+      if(h.type==='i')pa=k==='noise'?h.a:k==='conflict'?h.a*.6:h.a*.25;
+      else if(h.type==='d')pa=k==='help'?.55:k==='noise'?h.a:.45;
+      else if(h.type==='p')pa=.45;
+      else if(h.type==='r')pa=k==='noise'?.03:.42;
+      else if(h.type==='t')pa=k==='help'?.6:k==='conflict'?.45:.04;
+      else pa=.03;
+      if(ans>=0&&['r','t','d'].includes(h.type)&&k!=='noise')tgt=ans;
+    }
+    if(pa>0){if(tgt!=null)orig[tgt]=pa;else{const ws=pre.map((i,j)=>j===0?1.4:1),s=ws.reduce((a,b)=>a+b,0);pre.forEach((i,j)=>orig[i]=pa*ws[j]/s)}}
+    const masked=!!st.masked[h.id];const pe=masked?0:pa;
+    Object.keys(Q).forEach(q=>{w[q]+=Q[q]*(1-pe)});if(!masked)orig.forEach((v,i)=>w[i]+=v);
+    return {w,orig,pa,masked};
+  }
+  compute(st){
+    const R=REG[st.regime],L=Math.max(0,-R.dGold),M=st.masked,noisy=this.noisy(R),patchOn=st.patch&&noisy;
+    const lg={...BASE};let gold=BASE.Berlin+R.dGold,distRem=0,recov=0,lost=0,mun=0;
+    if(patchOn){recov=0.976*L;distRem=0.95}
+    else{
+      HEADS.forEach(h=>{
+        if(h.type==='i'||h.type==='d'){const Li=L*(R.intr||0)*h.wn,Bi=0.7*h.wn;
+          if(M[h.id]){recov+=0.92*Li;distRem+=0.85*Bi}else if(st.lambda>0){recov+=st.lambda*Li;distRem+=st.lambda*Bi}
+          if(R.kind==='help'){if(M[h.id])lost+=R.benefit*(h.type==='d'?R.retr*h.rn:0.012);else lost+=st.lambda*R.benefit*0.012}}
+        if((h.type==='t'||h.type==='d')&&M[h.id]){if(h.type==='t'&&R.kind==='help')lost+=R.benefit*R.retr*h.rn;if(R.kind==='conflict')mun+=0.6*h.rn/0.3}
+      });
+      if(st.mid){if(noisy){recov+=0.65*L;distRem+=0.4}if(R.kind==='help')lost+=0.66*R.benefit}
+      recov=Math.min(recov,L*1.02);distRem=Math.min(distRem,0.95);lost=Math.min(lost,R.benefit||0);
+    }
+    gold+=recov-lost;
+    Object.keys(R.dist).forEach(k=>{let b=R.dist[k];if(patchOn)b*=0.05;else if(R.kind==='conflict')b*=(1-Math.min(0.9,mun))*(1-0.3*distRem);else b*=(1-distRem);lg[k]=BASE[k]+b});
+    lg.Berlin=gold;
+    const ks=Object.keys(lg);const mx=Math.max(...ks.map(k=>lg[k]),OTHER);let Z=Math.exp(OTHER-mx);ks.forEach(k=>Z+=Math.exp(lg[k]-mx));
+    return {probs:ks.map(k=>({tok:k,p:Math.exp(lg[k]-mx)/Z})).sort((a,b)=>b.p-a.p)};
+  }
+  smooth(ctx,p){ctx.moveTo(p[0][0],p[0][1]);for(let i=0;i<p.length-1;i++){const p0=p[i-1]||p[i],p1=p[i],p2=p[i+1],p3=p[i+2]||p2;ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
+  draw(){
+    const cv=this.cvRef.current,wr=this.wrapRef.current;if(!cv||!wr)return;
+    const W=wr.clientWidth,H=wr.clientHeight;if(W<80||H<80)return;
+    const dpr=window.devicePixelRatio||1;if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+    const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    const t=performance.now()/1000,st=this.state,R=REG[st.regime],toks=tokensFor(st.regime),N=toks.length,E=N-1,S=8,foc=st.focus,show=st.show,noisy=this.noisy(R),patchOn=st.patch&&noisy;
+    for(let s=0;s<S;s++){const tg=foc?(foc.includes(s)?2.6:0.55):1;this.g[s]+=(tg-this.g[s])*0.08}
+    const compact=!!st.narrow||H<360,bw=Math.round(Math.min(184,Math.max(128,W*0.27))),padL=Math.round(Math.min(112,Math.max(68,W*0.16))),padR=bw+34,topY=compact?62:30,LF=W<640?'10px ':'11px ',cH=Math.max(26,Math.min(52,H*0.11)),cBot=H-14,cTop=cBot-cH,labY=cTop-16,yBot=labY-20;
+    const gsum=this.g.reduce((a,b)=>a+b,0),AW=Math.max(100,W-padL-padR),unit=AW/gsum;
+    const x0=[];let acc=padL;for(let s=0;s<S;s++){x0[s]=acc;acc+=unit*this.g[s]}
+    const DYcap=Math.max(14,Math.min(64,H*0.13)),DX=s=>Math.min(190,unit*this.g[s]*0.74),DY=s=>Math.min(DYcap,DX(s)*0.42);
+    let mDY=0;for(let s=0;s<S;s++)mDY=Math.max(mDY,DY(s));
+    const yTop=topY+mDY+10,ty=p=>yTop+(p+0.5)/N*(yBot-yTop),P=(p,z,s)=>[x0[s]+z*DX(s),ty(p)-z*DY(s)],zT=0.1;
+    const SA=s=>foc?(foc.includes(s)?1:0.2):1,vis=h=>show?show.includes(h.type):h.type!=='o';
+    const AT={};HEADS.forEach(h=>AT[h.id]=this.attn(h,toks,R,st));
+    const comp=this.compFor(st,toks,R,AT);
+    const hp=[];ctx.textBaseline='middle';const A={tok:{},head:{},end:{},left:{}};
+    toks.forEach((tk,p)=>{const y=P(p,zT,0)[1];ctx.globalAlpha=1;ctx.textAlign='right';ctx.fillStyle=tk.role==='func'?'#6b7380':ROLEC[tk.role];ctx.font=(tk.role==='end'||tk.role==='subj'?'600 ':'400 ')+LF+MONO;ctx.fillText((tk.text.trim()||'·')+(p===E?(W<640?' ·E':' · END'):''),padL-10,y)});
+    ctx.fillStyle='#59616c';ctx.font='400 10px '+MONO;ctx.textAlign='right';ctx.fillText('layer →',padL-12,labY);
+    for(let s=0;s<S;s++){
+      const al=SA(s),isF=foc&&foc.includes(s),dx=DX(s),dy=DY(s),inMid=st.mid&&s>=3&&s<=5;ctx.globalAlpha=al;ctx.setLineDash([]);
+      const t0=yTop-8,t1=yBot+8;
+      ctx.beginPath();ctx.moveTo(x0[s],t0);ctx.lineTo(x0[s],t1);ctx.lineTo(x0[s]+dx,t1-dy);ctx.lineTo(x0[s]+dx,t0-dy);ctx.closePath();
+      ctx.fillStyle=inMid?'rgba(20,40,48,0.92)':'rgba(17,21,26,0.9)';ctx.fill();ctx.strokeStyle=isF?'#5c6672':'#2b323c';ctx.lineWidth=isF?1.5:1;ctx.stroke();
+      const sp=unit*this.g[s];if(sp>=34||isF){ctx.globalAlpha=Math.max(al,0.5);ctx.fillStyle=inMid?SUP:TXT;ctx.textAlign='center';ctx.font='600 11px '+MONO;ctx.fillText(SL[s]+(inMid?' ↺':''),x0[s]+dx/2,labY)}
+      ctx.globalAlpha=al;A.left[s]=[x0[s]+dx*0.5,t0-dy*0.5];
+      toks.forEach((tk,p)=>{const [x,y]=P(p,zT,s);(A.tok[s]=A.tok[s]||{})[p]=[x,y];ctx.fillStyle=p===E?mix(SUP,INT,comp[s]):(tk.role==='func'?'#2f363f':ROLEC[tk.role]);const z=p===E?8:5;ctx.fillRect(x-z/2,y-z/2,z,z)});
+      if(s<=1&&(!show||show.includes('mlp'))){toks.forEach((tk,p)=>{if(!['subj','dist','evid','side'].includes(tk.role))return;const [x,y]=P(p,zT,s),r=4.5+1.4*Math.sin(t*3+p),cx=x+10;ctx.fillStyle=ROLEC[tk.role];ctx.beginPath();ctx.moveTo(cx,y-r);ctx.lineTo(cx+r,y);ctx.lineTo(cx,y+r);ctx.lineTo(cx-r,y);ctx.closePath();ctx.fill()})}
+      const EP=P(E,zT,s);A.end[s]=EP;
+      HEADS.filter(h=>h.s===s).forEach(h=>{
+        const B=P(E,0.3+h.k*0.13,s),a=AT[h.id],v=vis(h)&&al>0.5;
+        if(v){
+          for(let i=0;i<N;i++){if(i===E)continue;const Ap=P(i,zT,s),C=[Math.min(Ap[0],B[0])-(6+10*this.g[s]),(Ap[1]+B[1])/2];
+            if(a.masked&&a.orig[i]>0.02){ctx.setLineDash([3,4]);ctx.strokeStyle=DIM;ctx.globalAlpha=al*0.5;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(...Ap);ctx.quadraticCurveTo(...C,...B);ctx.stroke();ctx.setLineDash([])}
+            const wv=a.w[i];if(wv<0.035)continue;const col=ROLEC[toks[i].role]===FUNC?'#59616c':ROLEC[toks[i].role];
+            ctx.strokeStyle=col;ctx.globalAlpha=al*(0.16+0.5*wv);ctx.lineWidth=0.6+wv*4.5;ctx.beginPath();ctx.moveTo(...Ap);ctx.quadraticCurveTo(...C,...B);ctx.stroke();
+            const n=Math.max(1,Math.round(wv*7));ctx.fillStyle=col;ctx.globalAlpha=al*0.95;for(let j=0;j<n;j++){const u=(t*0.45+j/n+h.k*0.13+i*0.07)%1,q=qb(Ap,C,B,u);ctx.beginPath();ctx.arc(q[0],q[1],1.6+wv*1.6,0,7);ctx.fill()}}
+          let red=0;toks.forEach((tk,i)=>{if(tk.role==='dist'||tk.role==='side')red+=a.w[i]});if(h.type==='i'||h.type==='d')red*=(1-st.lambda);if(inMid)red=0;
+          const wc=red>0.12?INT:SUP;ctx.globalAlpha=al*0.7;ctx.strokeStyle=wc;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(...B);ctx.lineTo(...EP);ctx.stroke();
+          ctx.fillStyle=wc;for(let j=0;j<2;j++){const u=(t*0.8+j/2+h.k*0.21)%1;ctx.beginPath();ctx.arc(B[0]+(EP[0]-B[0])*u,B[1]+(EP[1]-B[1])*u,2,0,7);ctx.fill()}
+        }
+        ctx.globalAlpha=v?al:al*(h.type==='o'?0.5:0.6);this.node(ctx,h,B[0],B[1],a.masked,st.sel===h.id&&st.step===7,st.hover===h.id);
+        A.head[h.id]=B;if(al>0.5&&h.type!=='o')hp.push({id:h.id,x:B[0],y:B[1]});
+      });
+      if(patchOn&&s===6){ctx.globalAlpha=1;ctx.strokeStyle=SUP;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(EP[0],EP[1],11,0,7);ctx.stroke();ctx.fillStyle=SUP;ctx.textAlign='center';ctx.font='600 10px '+MONO;ctx.fillText('clean END',EP[0],EP[1]+20)}
+      if(s<S-1){const al2=Math.min(al,SA(s+1));toks.forEach((tk,p)=>{const Ap=P(p,zT,s),Bp=P(p,zT,s+1);ctx.globalAlpha=al2*(p===E?1:0.5);ctx.strokeStyle=p===E?mix(SUP,INT,comp[s]):(tk.role==='func'?'#2f363f':ROLEC[tk.role]);ctx.lineWidth=p===E?4:1;ctx.beginPath();ctx.moveTo(...Ap);ctx.lineTo(...Bp);ctx.stroke();
+        if(tk.role!=='func'||p===E){const n=p===E?3:1;for(let j=0;j<n;j++){const u=(t*0.35+j/n+p*0.17)%1;ctx.fillStyle=p===E?(((j+Math.floor(t*0.35+p*0.17))%3)/3<comp[s]?INT:SUP):ROLEC[tk.role];ctx.globalAlpha=al2;ctx.beginPath();ctx.arc(Ap[0]+(Bp[0]-Ap[0])*u,Ap[1]+(Bp[1]-Ap[1])*u,p===E?2.6:1.6,0,7);ctx.fill()}}})}
+    }
+    ctx.globalAlpha=1;ctx.setLineDash([]);
+    const xs=A.end.map?[]:[];for(let s=0;s<S;s++)xs[s]=A.end[s][0];
+    const yc=v=>cBot-Math.min(1,v/0.6)*cH,pts=xs.map((x,s)=>[x,yc(comp[s])]);
+    ctx.strokeStyle='#1f252d';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xs[0]-10,cBot+0.5);ctx.lineTo(xs[S-1]+10,cBot+0.5);ctx.stroke();
+    if(Object.keys(st.masked).length||st.patch||st.mid||st.lambda>0){const rf=this.compFor({...st,masked:{},patch:false,mid:false,lambda:0},toks,R);ctx.setLineDash([3,3]);ctx.strokeStyle='#6b7380';ctx.beginPath();this.smooth(ctx,xs.map((x,s)=>[x,yc(rf[s])]));ctx.stroke();ctx.setLineDash([])}
+    ctx.beginPath();this.smooth(ctx,pts);ctx.lineTo(pts[S-1][0],cBot);ctx.lineTo(pts[0][0],cBot);ctx.closePath();ctx.fillStyle='rgba(255,133,82,0.14)';ctx.fill();
+    ctx.beginPath();this.smooth(ctx,pts);ctx.strokeStyle=INT;ctx.lineWidth=1.5;ctx.stroke();
+    pts.forEach((q,s)=>{ctx.globalAlpha=Math.max(0.4,SA(s));ctx.fillStyle=mix(SUP,INT,Math.min(1,comp[s]*2.5));ctx.beginPath();ctx.arc(q[0],q[1],2.8,0,7);ctx.fill()});ctx.globalAlpha=1;
+    ctx.fillStyle=DIM;ctx.font='400 10px '+MONO;ctx.textAlign='left';ctx.fillText(W<640?'prefix':'prefix share',6,cTop+cH*0.4);ctx.fillText('in END',6,cTop+cH*0.4+12);
+    ctx.textAlign='left';ctx.fillStyle=INT;ctx.font='600 11px '+MONO;ctx.fillText(Math.round(comp[S-1]*100)+'%',pts[S-1][0]+10,pts[S-1][1]);
+    const T=A.end[S-1],C=this.compute(st),ob=C.probs[0];
+    ctx.strokeStyle=mix(SUP,INT,comp[S-1]);ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(T[0]+4,T[1]);ctx.lineTo(T[0]+26,T[1]);ctx.stroke();
+    const bh=46,bx=Math.min(W-bw-8,T[0]+28),by=Math.max(6,Math.min(H-bh-6,T[1]-bh/2));ctx.fillStyle='#11151a';ctx.strokeStyle='#2b323c';ctx.lineWidth=1;ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);
+    ctx.fillStyle=ob.tok==='Berlin'?SUP:INT;ctx.font=(bw<170?'600 11px ':'600 12px ')+MONO;ctx.textAlign='left';ctx.fillText((bw<170?'→ ':'predicts ')+ob.tok+'  '+(ob.p*100).toFixed(0)+'%',bx+10,by+14);
+    const fr=comp[S-1],gw=bw-20;ctx.fillStyle=SUP;ctx.fillRect(bx+10,by+26,gw*(1-fr),5);ctx.fillStyle=INT;ctx.fillRect(bx+10+gw*(1-fr),by+26,gw*fr,5);
+    ctx.fillStyle=DIM;ctx.font='400 10px '+MONO;ctx.fillText('END: '+Math.round(fr*100)+'% from prefix',bx+10,by+39);
+    A.compact=compact;A.out=[bx,by+bh/2];A.curve={x:0,y:labY-10,w:W,h:H-labY+10};A.labels={x:0,y:0,w:padL-6,h:H};
+    this.drawNarr(ctx,this.narrItems(st,toks,comp,ob),A,toks,st,W,H);
+    this.hp=hp;
+  }
+  compFor(st,toks,R,AT){const S=8,noisy=this.noisy(R),patchOn=st.patch&&noisy;if(!AT){AT={};HEADS.forEach(h=>AT[h.id]=this.attn(h,toks,R,st))}
+    const comp=[];let Rc=0,Ic=1;
+    for(let s=0;s<S;s++){if(patchOn&&s===6){Rc=0;Ic=1.5}
+      HEADS.filter(h=>h.s===s).forEach(h=>{if(st.mid&&s>=3&&s<=5)return;const a=AT[h.id];let red=0,ink=0;toks.forEach((tk,i)=>{if(tk.role==='dist'||tk.role==='side')red+=a.w[i];if(tk.role==='subj'||tk.role==='rel'||tk.role==='evid')ink+=a.w[i]});if(h.type==='i'||h.type==='d')red*=(1-st.lambda);if(patchOn&&s>=6)red*=0.05;Rc+=red*GAIN[h.type];Ic+=ink*0.35});
+      comp[s]=Rc/(Rc+Ic)}
+    return comp}
+  narrItems(st,toks,comp,ob){
+    const R=REG[st.regime],noisy=this.noisy(R),help=R.kind==='help',pct=s=>Math.round((comp[s]||0)*100)+'%',P=Math.round(ob.p*100)+'%';
+    const hasPre=toks.some(t=>t.pre),sel=HEADS.find(h=>h.id===st.sel)||maxA,m=!!st.masked[sel.id];
+    const T=(k,o)=>Object.assign({k},o||{}),it=(tg,title,body,c)=>({tg,title,body,c:c||TXT}),okc=ob.tok==='Berlin'?SUP:INT;
+    switch(st.step){
+     case 0:return [it(T('tok',{s:0,r:hasPre?'pre':'subj'}),'Tokens enter on the left','Each row is one token. The prefix sits in front of the query.',INT),
+       it(T('tok',{s:3,r:'subj'}),'The residual stream flows right',"Each token's state is carried forward, layer by layer.",SUP),
+       it(T('head',{ty:'i',s:7}),'Heads read and write','A head attends to tokens (the arcs) and writes what it read into END.',TXT),
+       it(T('out'),'END makes the prediction',"The END row's final state becomes the next token.",okc)];
+     case 1:return [it(T('tok',{s:1,r:hasPre?'pre':'subj'}),'The context changes',hasPre?'Now: '+R.label+' context in front of the query.':'No context: only the query.',hasPre&&!help?INT:SUP),
+       it(T('end',{s:6}),'END absorbs it',noisy?'After the last layer, '+pct(7)+' of END content comes from the prefix.':help?'Context that supports Berlin flows into END.':'END only carries the query.',noisy?INT:SUP),
+       it(T('out'),'The prediction shifts',ob.tok+' at '+P+'.',okc)];
+     case 2:return [it(T('tok',{s:1,r:'subj'}),'Germany gets enriched','Early MLPs attach what the model knows: Berlin, Europe, Deutsch.',SUP),
+       it(T('tok',{s:1,r:'subj'}),"The prefix doesn't change that",'Switch bare and irrelevant: this diamond stays the same.',SUP),
+       ...(hasPre?[it(T('tok',{s:1,r:'pre'}),'Prefix words get enriched too','“Computers” picks up software, keyboard.',INT)]:[]),
+       it(T('end',{s:2}),'So the damage happens later',"Germany's information is intact. What changes is what reaches END.",TXT)];
+     case 3:return [it(T('head',{ty:'p',s:3}),'Parroting heads read the prefix','Attention spreads over several prefix words at once.',TXT),
+       it(T('head',{ty:'p',s:4}),'They copy what they read',"The write is a blend of those words' identities.",INT),
+       it(T('end',{s:5}),'END carries the copies',pct(5)+' of END content comes from the prefix here.',INT)];
+     case 4:return noisy?[it(T('head',{ty:'r',s:4}),'Readers check the relation','They attend to “capital” and “Germany”.',SUP),
+       it(T('head',{ty:'r',s:3}),'They skip the filler','Almost no attention goes to the prefix.',SUP),
+       it(T('end',{s:3}),'But END is already tinted',pct(3)+' prefix content arrived from earlier layers.',INT)]
+      :[it(T('head',{ty:'r',s:4}),'Readers find a candidate',R.kind==='conflict'?'They jump to “Munich”: a city in the answer slot.':'They jump to the answer in the context.',SUP),
+       it(T('out'),'The prediction follows',ob.tok+' at '+P+'.',okc)];
+     case 5:return [it(T('left',{s:4}),'The middle block',"Layers 12–23: every head's END write.",SUP),
+       it(T('end',{s:4}),st.mid?'Writes swapped for clean ones':'Restore is off',st.mid?"Each END write is replaced by the clean run's.":'Toggle the restore to swap in clean writes.',SUP),
+       it(T('out'),help?(st.mid?'The help is erased too':'Golden context helps'):(st.mid?'Berlin comes back':'Berlin is weakened'),help&&st.mid?'Restoring is not selective: useful evidence goes with it.':'Berlin at '+P+'.',help&&st.mid?INT:SUP)];
+     case 6:return noisy?[it(T('head',{ty:'i',s:6}),'Intrusion heads turn to the prefix','Part of their attention leaves BOS and the query.',INT),
+       it(T('head',{ty:'i',s:7}),'Their Berlin support weakens','Less is read from the query, so less supports Berlin.',INT),
+       it(T('end',{s:7}),'Their writes add distractor content','END after the last layer: '+pct(7)+' from the prefix.',INT)]
+      :[it(T('head',{ty:'i',s:6}),'Bare query','These heads read BOS and the query only.',SUP),
+       it(T('head',{ty:'i',s:7}),'Now add the prefix','Switch to irrelevant and watch their attention move.',TXT)];
+     case 7:return [it(T('sel'),'P: read from the prefix','Orange arcs. Carries the distractor content.',INT),
+       it(T('sel'),'U: read from everything else','Cyan arcs. Carries the support for Berlin.',SUP),
+       it(T('sel'),m?'Mask on: P is cut':'Mask the head',m?'Dashed arcs are blocked. Click again to unmask.':'Click the head, or the button on the left.',m?TXT:INT),
+       ...(m?[it(T('sel'),'U is scaled up','The freed attention goes to U: ×'+(1/(1-sel.a)).toFixed(2)+'.',SUP)]:[])];
+     case 8:{const rm=!!st.masked[MASKS.retr[0]],im=!!st.masked[MASKS.k10[0]];return [it(T('head',{ty:'t',s:6}),'Retrieval heads',help?'They read “Berlin” from the golden context.':'Nothing useful to retrieve here.',RET),
+       it(T('head',{ty:'i',s:7}),'Intrusion heads','A mostly different set of heads.',INT),
+       it(T('out'),rm?'Retrieval masked':im?'Intrusion masked':'Nothing masked',help?(rm?'The golden help is lost.':'The golden help is kept: Berlin at '+P+'.'):'Berlin at '+P+'.',help&&rm?INT:SUP)]}
+     case 9:return [it(T('end',{s:6}),st.patch?'END swapped at L24':'The oracle patch point',st.patch?"END gets the clean run's state.":"Toggle the patch to swap END's state here.",SUP),
+       it(T('end',{s:7}),'Later layers recompute',st.patch?'They now see a clean END.':'They see the contaminated END.',st.patch?SUP:INT),
+       ...(st.lambda>0?[it(T('head',{ty:'i',s:7}),'λ blends intrusion writes','λ = '+st.lambda.toFixed(2)+': writes pulled toward clean.',INT)]:[]),
+       it(T('out'),'Result','Berlin at '+P+'.',okc)];
+     default:return [it(T('out'),'Free play','Click any head to mask it. Combine regimes, masks, λ and the patch.',TXT)];
+    }
+  }
+  resolve(tg,A,toks,st){
+    if(tg.k==='out')return A.out;if(tg.k==='end')return A.end[tg.s];if(tg.k==='left')return A.left[tg.s];if(tg.k==='sel')return A.head[st.sel];
+    if(tg.k==='head'){const hs=HEADS.filter(h=>h.type===tg.ty),h=hs.find(h=>h.s===tg.s)||hs[0];return h?A.head[h.id]:null}
+    if(tg.k==='tok'){const i=tg.r==='pre'?toks.findIndex(t=>t.pre&&t.role!=='func'):toks.findIndex(t=>t.q&&t.role==='subj');return A.tok[tg.s]?A.tok[tg.s][i]:null}
+    return null;
+  }
+  wrapText(ctx,txt,maxW){const words=(txt||'').split(' '),lines=[];let cur='';words.forEach(wd=>{const t=cur?cur+' '+wd:wd;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=wd}else cur=t});if(cur)lines.push(cur);return lines}
+  drawNarr(ctx,items,A,toks,st,W,H){
+    const ni=st.ni%Math.max(1,items.length),used={},L=[],SANS='"IBM Plex Sans", sans-serif',maxW=Math.min(250,W*0.42);
+    items.forEach((it,i)=>{const at=this.resolve(it.tg,A,toks,st);if(!at)return;const key=Math.round(at[0])+','+Math.round(at[1]);const off=used[key]||0;used[key]=off+1;L.push({at,i,it,mx:at[0]-16-off*24,my:at[1]-18})});
+    const compact=!!A.compact;
+    L.forEach(d=>{ctx.font='400 11.5px '+SANS;d.lines=compact&&d.i!==ni?[]:this.wrapText(ctx,d.it.body,maxW-20);const lw=Math.max(0,...d.lines.map(l=>ctx.measureText(l).width));ctx.font='600 12px '+SANS;const tw=ctx.measureText(d.it.title).width;d.w=Math.min(maxW,Math.max(tw+42,lw+20));d.h=d.lines.length?32+d.lines.length*15:28});
+    const placed=[{x:W-370,y:2,w:366,h:24}];if(A.curve)placed.push(A.curve);if(A.labels)placed.push(A.labels);if(A.out)placed.push({x:A.out[0],y:A.out[1]-23,w:190,h:46});const ov=(a,b)=>!(a.x+a.w+6<b.x||b.x+b.w+6<a.x||a.y+a.h+6<b.y||b.y+b.h+6<a.y),fit=(x,y,d)=>({x:Math.max(6,Math.min(W-d.w-6,x)),y:Math.max(6,Math.min(H-d.h-6,y)),w:d.w,h:d.h});
+    L.forEach(d=>{if(compact){d.box=null;return}const c=[[d.mx-18-d.w,d.my-14],[d.mx-d.w/2,d.my-26-d.h],[d.mx+18,d.my-14],[d.mx-d.w/2,d.my+20]];let b=null;for(const [x,y] of c){const r=fit(x,y,d);if(!placed.some(p=>ov(p,r))){b=r;break}}
+      if(!b){b=fit(c[0][0],c[0][1],d);let g=0;while(placed.some(p=>ov(p,b))&&g<60){b.y+=10;if(b.y+b.h>H-6){b.y=6;b.x=Math.max(6,b.x-60)}g++}}placed.push(b);d.box=b});
+    const ph=(performance.now()/1000)%1.4/1.4;
+    const one=(d,act)=>{const c=d.it.c,b=d.box;ctx.setLineDash([]);ctx.globalAlpha=1;
+      if(!b){ctx.strokeStyle=act?c:'#3a414b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(d.mx,d.my);ctx.lineTo(d.at[0],d.at[1]);ctx.stroke();if(act){ctx.strokeStyle=c;ctx.globalAlpha=1-ph;ctx.beginPath();ctx.arc(d.at[0],d.at[1],5+12*ph,0,7);ctx.stroke();ctx.globalAlpha=1}ctx.fillStyle=act?c:'#0e1115';ctx.strokeStyle=c;ctx.beginPath();ctx.arc(d.mx,d.my,8,0,7);ctx.fill();ctx.stroke();ctx.fillStyle=act?'#0b0d10':c;ctx.font='600 10px '+MONO;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(d.i+1),d.mx,d.my+0.5);return}
+      const cx=Math.max(b.x,Math.min(d.mx,b.x+b.w)),cy=Math.max(b.y,Math.min(d.my,b.y+b.h));
+      ctx.strokeStyle=act?c:'#3a414b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(d.mx,d.my);ctx.lineTo(d.at[0],d.at[1]);ctx.stroke();
+      if(act){ctx.strokeStyle=c;ctx.globalAlpha=1-ph;ctx.beginPath();ctx.arc(d.at[0],d.at[1],5+12*ph,0,7);ctx.stroke();ctx.globalAlpha=1}
+      ctx.fillStyle=act?c:'#0e1115';ctx.strokeStyle=c;ctx.beginPath();ctx.arc(d.mx,d.my,8,0,7);ctx.fill();ctx.stroke();
+      ctx.fillStyle=act?'#0b0d10':c;ctx.font='600 10px '+MONO;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(d.i+1),d.mx,d.my+0.5);
+      ctx.fillStyle=act?'rgba(13,16,20,0.97)':'rgba(13,16,20,0.9)';ctx.fillRect(b.x,b.y,b.w,b.h);ctx.strokeStyle=act?c:'#2b323c';ctx.lineWidth=act?1.5:1;ctx.strokeRect(b.x+0.5,b.y+0.5,b.w-1,b.h-1);
+      ctx.fillStyle=act?c:'#0e1115';ctx.strokeStyle=c;ctx.lineWidth=1;ctx.beginPath();ctx.arc(b.x+16,b.y+15,8,0,7);ctx.fill();ctx.stroke();
+      ctx.fillStyle=act?'#0b0d10':c;ctx.font='600 10px '+MONO;ctx.textAlign='center';ctx.fillText(String(d.i+1),b.x+16,b.y+15.5);
+      ctx.textAlign='left';ctx.fillStyle=act?c:'#c9ced5';ctx.font='600 12px '+SANS;ctx.fillText(d.it.title,b.x+30,b.y+15);
+      ctx.fillStyle=act?'#d5d9de':'#8b929c';ctx.font='400 11.5px '+SANS;d.lines.forEach((l,k)=>ctx.fillText(l,b.x+10,b.y+33+k*15))};
+    L.filter(d=>d.i!==ni).forEach(d=>one(d,false));L.filter(d=>d.i===ni).forEach(d=>one(d,true));
+    if(compact&&items[ni]){const it=items[ni],c=it.c,bwB=W-12;ctx.font='400 11px '+SANS;let ln=this.wrapText(ctx,it.body,bwB-40);if(ln.length>2){ln=ln.slice(0,2);ln[1]=ln[1].replace(/\s*\S*$/,'')+'…'}const bh=20+ln.length*14;ctx.globalAlpha=1;ctx.fillStyle='rgba(13,16,20,0.97)';ctx.fillRect(6,4,bwB,bh);ctx.strokeStyle=c;ctx.lineWidth=1;ctx.strokeRect(6.5,4.5,bwB-1,bh-1);ctx.fillStyle=c;ctx.beginPath();ctx.arc(20,15,8,0,7);ctx.fill();ctx.fillStyle='#0b0d10';ctx.font='600 10px '+MONO;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(ni+1),20,15.5);ctx.textAlign='left';ctx.fillStyle=c;ctx.font='600 11.5px '+SANS;ctx.fillText(it.title,34,15);ctx.fillStyle='#6b7380';ctx.font='500 10px '+MONO;ctx.textAlign='right';ctx.fillText((ni+1)+'/'+items.length,bwB,15);ctx.textAlign='left';ctx.fillStyle='#c9ced5';ctx.font='400 11px '+SANS;ln.forEach((l,k)=>ctx.fillText(l,34,29+k*14))}
+  }
+  node(ctx,h,x,y,masked,sel,hov){
+    ctx.setLineDash([]);
+    if(sel||hov){ctx.strokeStyle=TXT;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,11,0,7);ctx.stroke()}
+    ctx.lineWidth=1.5;
+    if(h.type==='i'){ctx.fillStyle=masked?BG:INT;ctx.strokeStyle=INT;ctx.fillRect(x-5,y-5,10,10);ctx.strokeRect(x-5,y-5,10,10)}
+    else if(h.type==='d'){ctx.fillStyle=masked?BG:INT;ctx.strokeStyle=RET;ctx.beginPath();ctx.moveTo(x,y-7);ctx.lineTo(x+7,y);ctx.lineTo(x,y+7);ctx.lineTo(x-7,y);ctx.closePath();ctx.fill();ctx.stroke()}
+    else if(h.type==='t'){ctx.fillStyle=masked?BG:'rgba(179,157,255,0.3)';ctx.strokeStyle=RET;ctx.fillRect(x-5,y-5,10,10);ctx.strokeRect(x-5,y-5,10,10)}
+    else if(h.type==='p'){ctx.fillStyle=TXT;ctx.beginPath();ctx.arc(x,y,4.5,0,7);ctx.fill()}
+    else if(h.type==='r'){ctx.fillStyle=BG;ctx.strokeStyle=SUP;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill();ctx.stroke()}
+    else {ctx.fillStyle='#3a414b';ctx.beginPath();ctx.arc(x,y,2.5,0,7);ctx.fill()}
+    if(masked){ctx.strokeStyle=TXT;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x-6,y-6);ctx.lineTo(x+6,y+6);ctx.moveTo(x+6,y-6);ctx.lineTo(x-6,y+6);ctx.stroke()}
+  }
+  toggle(id){const m={...this.state.masked};if(m[id])delete m[id];else m[id]=true;this.setState({masked:m,sel:id})}
+  onAct=e=>{const [k,v]=e.currentTarget.dataset.act.split(':');
+    if(k==='regime')this.setState({regime:v});
+    else if(k==='mask'){if(v==='sel')this.toggle(this.state.sel);else{const m={};MASKS[v].forEach(id=>m[id]=true);this.setState({masked:m})}}
+    else if(k==='patch')this.setState({patch:!this.state.patch});
+    else if(k==='mid')this.setState({mid:!this.state.mid});
+    else if(k==='reset')this.setState({regime:'irr1',masked:{},patch:false,lambda:0,mid:false,focus:null,show:null})};
+  onLambda=e=>this.setState({lambda:+e.target.value});
+  onNarrNext=()=>this.setState(s=>({ni:(s.ni%Math.max(1,this.nLen||1)+1)%Math.max(1,this.nLen||1),pin:true}));
+  onNarr=e=>{const i=+e.currentTarget.dataset.i;this.setState(s=>({ni:i,pin:s.pin&&s.ni===i?false:true}))};
+  onMove=e=>{const r=e.currentTarget.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;let best=null,bd=12;(this.hp||[]).forEach(p=>{const d=Math.hypot(p.x-mx,p.y-my);if(d<bd){bd=d;best=p}});const id=best?best.id:null;if(id!==this.state.hover)this.setState({hover:id,tx:best?Math.max(8,Math.min(best.x+14,r.width-200)):0,ty:best?Math.max(best.y-70,8):0})};
+  onLeave=()=>{if(this.state.hover)this.setState({hover:null})};
+  onCanvasClick=()=>{if(this.state.hover)this.toggle(this.state.hover)};
+  renderVals(){
+    const st=this.state,R=REG[st.regime],C=this.compute(st),toks=tokensFor(st.regime);
+    const top=C.probs.slice(0,3),mp=top[0].p;
+    const sel=HEADS.find(h=>h.id===st.sel)||maxA,selM=!!st.masked[sel.id];
+    const hv=HEADS.find(h=>h.id===st.hover);let tip=null;
+    if(hv){const a=this.attn(hv,toks,R,st);tip={id:hv.id,type:TYPEN[hv.type],a:a.masked?'0 (masked)':a.pa.toFixed(2),hint:a.masked?'click to unmask':'click to mask'}}
+    const tg=(b,c)=>({bg:b?c+'26':'transparent',bd:b?c:'#2b323c',l:b?'on':'off'});
+    const pt=tg(st.patch,'#5cc8e0'),md=tg(st.mid,'#5cc8e0'),sb=tg(selM,'#ff8552');
+    const nm=Object.keys(st.masked).length;
+    const modeLine=[st.patch?(this.noisy(R)?'oracle patch on':'patch: no-op here'):'',st.mid?'mid-block restored':'',st.lambda>0?'λ '+st.lambda.toFixed(2):'',nm?nm+' heads masked':''].filter(Boolean).join(' · ');
+    const ob=top[0];
+    const pm={};C.probs.forEach(x=>pm[x.tok]=x.p);const RF=this.compute({...st,regime:'none',masked:{},patch:false,lambda:0,mid:false}),rmap={};RF.probs.forEach(x=>rmap[x.tok]=x.p);
+    const yv=p=>4+(1-Math.max(0,Math.min(1,(Math.log10(Math.max(p,1e-9))+5)/5)))*92;
+    const dp=CANDS.map((k,i)=>[(i+0.5)*30,yv(pm[k]||1e-9)]),rp=CANDS.map((k,i)=>[(i+0.5)*30,yv(rmap[k]||1e-9)]),dLine=cr(dp),okD=ob.tok==='Berlin';
+    const comp=this.compFor(st,toks,R),items=this.narrItems(st,toks,comp,ob);this.nLen=items.length;const ni=st.ni%Math.max(1,items.length);
+    const NT=['Orientation','Context regimes','MLP enrichment','Parroting','Relational readers','Middle block','Intrusion heads','P / U split','Intrusion vs retrieval','Oracle patch and λ','Free play'];
+    return {
+      distLine:dLine,distArea:dLine+' L'+dp[9][0]+' 100 L'+dp[0][0]+' 100 Z',distRef:cr(rp),distStroke:okD?SUP:INT,distFill:okD?'rgba(92,200,224,0.12)':'rgba(255,133,82,0.12)',
+      distPts:CANDS.map((k,i)=>({x:((i+0.5)*10).toFixed(1)+'%',y:dp[i][1].toFixed(1)+'%',c:k==='Berlin'?SUP:(R.dist[k]!=null?INT:'#8b929c'),lab:(k==='Berlin'||R.dist[k]!=null||k===ob.tok)?(({mathematical:'math.',simulations:'simul.',Calculator:'Calc.',Computers:'Comp.'})[k]||k):'',tx:i===0?'-20%':i===9?'-85%':'-50%'})),
+      onNarr:this.onNarr,onNarrNext:this.onNarrNext,panelRef:this.panelRef,narrow:!!st.narrow,asideDisp:st.narrow?'none':'flex',tabWrap:'nowrap',keyDisp:st.narrow?'none':'flex',promptFs:st.narrow?'13px':'16px',
+      cap:(()=>{const x=items[ni]||{title:'',body:'',c:TXT};return {num:String(ni+1),title:x.title,body:x.body,c:x.c,of:(ni+1)+'/'+items.length}})(),narrTitle:(st.step>=0?String(st.step).padStart(2,'0')+' · ':'')+(NT[st.step]||'Free play'),pinLabel:st.pin?'paused · click again to resume':'auto-advancing',
+      narr:items.map((x,i)=>{const a=i===ni;return {i:String(i),num:String(i+1),title:x.title,body:x.body,c:x.c,bg:a?x.c+'14':'transparent',bd:a?x.c:'#1f252d',nb:a?x.c:'transparent',nf:a?'#0b0d10':x.c}}),
+      leftRef:this.leftRef,wrapRef:this.wrapRef,cvRef:this.cvRef,
+      onAct:this.onAct,onLambda:this.onLambda,onMove:this.onMove,onLeave:this.onLeave,onCanvasClick:this.onCanvasClick,
+      cursor:st.hover?'pointer':'default',modeLine,
+      regimes:ORDER.map(k=>({key:k,label:REG[k].label,fg:k===st.regime?TXT:DIM,bd:k===st.regime?INT:'transparent'})),
+      promptToks:toks.slice(1).map(t=>{const isPre=t.pre;const c=t.role==='func'?(isPre?'#9aa1ab':TXT):ROLEC[t.role];return {text:t.text.trim(),fg:t.role==='end'?TXT:c,bg:isPre?(t.role==='dist'?'#ff85521a':'#161b21'):(t.role==='subj'?'#5cc8e01a':'transparent'),bd:isPre?(t.role==='dist'?'#ff855266':'#2b323c'):(t.role==='subj'?'#5cc8e066':'transparent')}}),
+      ansTok:ob.tok+' ?',ansCol:ob.tok==='Berlin'?SUP:INT,
+      top3:top.map(c=>({tok:c.tok,p:(c.p*100).toFixed(0)+'%',w:(c.p/mp*100).toFixed(1)+'%',col:c.tok==='Berlin'?SUP:(R.dist[c.tok]!=null?INT:DIM)})),
+      patchBg:pt.bg,patchBd:pt.bd,patchLabel:pt.l,midBg:md.bg,midBd:md.bd,midLabel:md.l,
+      lambda:st.lambda,lambdaLabel:st.lambda.toFixed(2),
+      selId:sel.id,selA:sel.a.toFixed(2),selPw:(sel.a*100).toFixed(0)+'%',selUw:((1-sel.a)*100).toFixed(0)+'%',selGain:'×'+(1/(1-sel.a)).toFixed(2),
+      selBg:sb.bg,selBd:sb.bd,selBtnLabel:selM?'unmask this head':'mask this head',
+      hasTip:!!tip,tip:tip||{id:'',type:'',a:'',hint:''},tipX:st.tx,tipY:st.ty
+    };
+  }
+}
+</script>
+</body>
+</html>
